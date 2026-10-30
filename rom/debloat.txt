@@ -1,0 +1,2 @@
+# one path per line, relative to /system (example entries, review before use)
+# app/ExampleBloat

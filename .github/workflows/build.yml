@@ -1,0 +1,27 @@
+name: Build ROM
+on:
+  workflow_dispatch:
+  push:
+    paths: ['rom/**', '.github/workflows/build.yml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n rom/build.sh && echo "build.sh syntax OK"
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y android-sdk-libsparse-utils lz4 zip unzip p7zip-full
+      - name: Download stock firmware
+        run: wget -q -O fw.zip "${{ secrets.STOCK_FW_URL }}"
+      - name: Build
+        run: bash rom/build.sh fw.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lmgos-j120f
+          path: out/
