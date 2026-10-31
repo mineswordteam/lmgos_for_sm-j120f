@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -25,6 +26,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.*
 
 val NEON = 0xFF38B6FF.toInt()
+val HIDDEN = setOf("com.sec.android.app.camera", "com.sec.android.gallery3d", "com.android.settings", "com.android.camera2", "com.android.gallery3d")
 
 fun nbtn(c: Context, t: String, click: () -> Unit): TextView {
     val b = TextView(c); b.text = t; b.textSize = 20f; b.setTextColor(Color.WHITE); b.gravity = Gravity.CENTER
@@ -68,16 +70,16 @@ class Launcher : Activity() {
     private fun d(x: Int) = (x * resources.displayMetrics.density).toInt()
     private fun prefs() = getSharedPreferences("lmg", 0)
 
-    private fun hex(icon: Drawable?, glyph: String?, w: Int, h: Int, act: () -> Unit): HexView {
+    private fun hex(icon: Drawable?, glyph: String?, w: Int, h: Int, m: Int = 7, act: () -> Unit): HexView {
         val v = HexView(this, icon, glyph)
-        v.layoutParams = LinearLayout.LayoutParams(d(w), d(h)).apply { setMargins(d(7), 0, d(7), 0) }
+        v.layoutParams = LinearLayout.LayoutParams(d(w), d(h)).apply { setMargins(d(m), 0, d(m), 0) }
         v.setOnClickListener { x -> x.animate().scaleX(.85f).scaleY(.85f).setDuration(90).withEndAction { x.animate().scaleX(1f).scaleY(1f).setDuration(120).start(); act() }.start() }
         return v
     }
 
     private fun cell(icon: Drawable?, glyph: String?, label: CharSequence, act: () -> Unit): LinearLayout {
         val c = LinearLayout(this); c.orientation = LinearLayout.VERTICAL; c.gravity = Gravity.CENTER_HORIZONTAL
-        c.addView(hex(icon, glyph, 62, 70, act))
+        c.addView(hex(icon, glyph, 62, 70, 7, act))
         val t = TextView(this); t.text = label; t.textSize = 11f; t.setTextColor(0xFFBFE6FF.toInt()); t.maxLines = 1; t.gravity = Gravity.CENTER
         t.ellipsize = android.text.TextUtils.TruncateAt.END
         c.addView(t, LinearLayout.LayoutParams(d(76), -2)); return c
@@ -85,7 +87,13 @@ class Launcher : Activity() {
 
     private fun gp() = GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply { width = 0; topMargin = d(14) }
 
-    private fun go(i: Intent) { try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { Toast.makeText(this, "برنامه‌ای پیدا نشد", Toast.LENGTH_SHORT).show() } }
+    private fun ic(i: Intent) = packageManager.resolveActivity(i, 0)?.loadIcon(packageManager)
+    private fun rec(i: Intent) {
+        val cn = i.component ?: packageManager.resolveActivity(i, 0)?.activityInfo?.let { ComponentName(it.packageName, it.name) } ?: return
+        if (cn.className.endsWith("Launcher") || cn.className.endsWith("RecentsActivity")) return
+        addRecent(this, cn)
+    }
+    private fun go(i: Intent) { try { rec(i); startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { Toast.makeText(this, "برنامه‌ای پیدا نشد", Toast.LENGTH_SHORT).show() } }
 
     private fun page(): FrameLayout { val f = FrameLayout(this); f.layoutParams = LinearLayout.LayoutParams(sw, -1); return f }
 
@@ -124,14 +132,15 @@ class Launcher : Activity() {
         fun sys(l: String, i: Intent) = fg.addView(cell(packageManager.resolveActivity(i, 0)?.loadIcon(packageManager), null, l) { go(i) }, gp())
         fav("ماشین‌حساب", "CALC", Intent(this, CalcActivity::class.java)); fav("یادداشت", "NOTE", Intent(this, NotesActivity::class.java))
         fav("ساعت", "TIME", Intent(this, ClockActivity::class.java)); fav("نصب‌کننده", "APK", Intent(this, Installer::class.java))
+        fav("دوربین", "CAM", Intent(this, CameraActivity::class.java)); fav("گالری", "PIC", Intent(this, GalleryActivity::class.java))
+        fav("تنظیمات", "SET", Intent(this, SettingsActivity::class.java)); fav("اخیر", "TABS", Intent(this, RecentsActivity::class.java))
         sys("تماس", Intent(Intent.ACTION_DIAL)); sys("پیام", Intent(Intent.ACTION_VIEW, Uri.parse("sms:")))
-        sys("دوربین", Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)); sys("تنظیمات", Intent(Settings.ACTION_SETTINGS))
         p2.addView(fg, -1, -2)
 
         val p3 = page()
         val c3 = LinearLayout(this); c3.orientation = LinearLayout.VERTICAL; c3.gravity = Gravity.CENTER_HORIZONTAL; c3.setPadding(d(24), d(80), d(24), 0)
         val lg = ImageView(this); lg.setImageResource(R.drawable.logo); c3.addView(lg, d(120), d(120))
-        val inf = TextView(this); inf.text = "LMG OS 0.2\nSM-J120F · Android " + Build.VERSION.RELEASE; inf.gravity = Gravity.CENTER; inf.setTextColor(NEON); inf.textSize = 13f; c3.addView(inf)
+        val inf = TextView(this); inf.text = "LMG OS 0.3\nSM-J120F · Android " + Build.VERSION.RELEASE; inf.gravity = Gravity.CENTER; inf.setTextColor(NEON); inf.textSize = 13f; c3.addView(inf)
         notePrev = TextView(this); notePrev.setTextColor(0xFFBFE6FF.toInt()); notePrev.textSize = 13f; notePrev.setPadding(d(14), d(14), d(14), d(14)); notePrev.maxLines = 6
         notePrev.background = GradientDrawable().apply { setColor(0x99061224.toInt()); setStroke(2, 0xFF1E5FA8.toInt()); cornerRadius = d(12).toFloat() }
         c3.addView(notePrev, LinearLayout.LayoutParams(-1, -2).apply { topMargin = d(22) }); p3.addView(c3, -1, -2)
@@ -146,9 +155,10 @@ class Launcher : Activity() {
         }
 
         val dock = LinearLayout(this); dock.gravity = Gravity.CENTER
-        listOf(Intent(Intent.ACTION_DIAL), Intent(Intent.ACTION_VIEW, Uri.parse("sms:")), Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), Intent(Settings.ACTION_SETTINGS)).forEach { i ->
-            dock.addView(hex(packageManager.resolveActivity(i, 0)?.loadIcon(packageManager), null, 62, 70) { go(i) })
-        }
+        fun dk(i: Drawable?, g: String?, t: Intent) = dock.addView(hex(i, g, 54, 61, 4) { go(t) })
+        val dial = Intent(Intent.ACTION_DIAL); val smsI = Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))
+        dk(ic(dial), null, dial); dk(ic(smsI), null, smsI); dk(null, "TABS", Intent(this, RecentsActivity::class.java))
+        dk(null, "CAM", Intent(this, CameraActivity::class.java)); dk(null, "SET", Intent(this, SettingsActivity::class.java))
         home.addView(dock, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM).apply { bottomMargin = d(34) })
 
         grid = GridLayout(this); grid.columnCount = 4; grid.setPadding(d(6), d(60), d(6), d(70))
@@ -174,7 +184,8 @@ class Launcher : Activity() {
         tile(row2, "SOUND", am.ringerMode == AudioManager.RINGER_MODE_NORMAL) { v ->
             val n = am.ringerMode == AudioManager.RINGER_MODE_NORMAL; am.ringerMode = if (n) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL; v.alpha = if (n) .4f else 1f
         }
-        tile(row2, "SET", true) { go(Intent(Settings.ACTION_SETTINGS)) }
+        tile(row2, "SET", true) { closePanel(); go(Intent(this, SettingsActivity::class.java)) }
+        tile(row2, "TABS", true) { closePanel(); go(Intent(this, RecentsActivity::class.java)) }
         tile(row2, "BOOT", true) { closePanel(); showSplash() }
         panel.addView(row1); panel.addView(row2)
         val vol = SeekBar(this); vol.max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC); vol.progress = am.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -235,7 +246,7 @@ class Launcher : Activity() {
     private fun fill() {
         grid.removeAllViews()
         val q = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        packageManager.queryIntentActivities(q, 0).sortedBy { it.loadLabel(packageManager).toString().lowercase() }.forEach { r ->
+        packageManager.queryIntentActivities(q, 0).filter { it.activityInfo.packageName !in HIDDEN }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }.forEach { r ->
             grid.addView(cell(r.loadIcon(packageManager), null, r.loadLabel(packageManager)) {
                 closeDrawer(); go(Intent(Intent.ACTION_MAIN).setClassName(r.activityInfo.packageName, r.activityInfo.name))
             }, gp())

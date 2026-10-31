@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "os.lmg.launcher"
     compileSdk = 34
-    defaultConfig { applicationId = "os.lmg.launcher"; minSdk = 21; targetSdk = 23; versionCode = 2; versionName = "0.2" }
+    defaultConfig { applicationId = "os.lmg.launcher"; minSdk = 21; targetSdk = 23; versionCode = 3; versionName = "0.3" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
