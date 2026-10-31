@@ -91,7 +91,7 @@ class Installer : Activity() {
         if (u != null) load(u) else startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE), 7)
     }
 
-    override fun onActivityResult(r: Int, c: Int, data: Intent?) { data?.data?.let { load(it) } ?: if (r == 7) finish() }
+    override fun onActivityResult(r: Int, c: Int, data: Intent?) { val u = data?.data; if (u != null) load(u) else if (r == 7) finish() }
     override fun onDestroy() { super.onDestroy(); try { unregisterReceiver(rcv) } catch (e: Exception) {} }
 
     private fun load(u: Uri) {

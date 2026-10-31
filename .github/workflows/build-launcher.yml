@@ -2,7 +2,10 @@ name: Build LMG Launcher
 on:
   push:
     branches: [main]
+    paths: ['app/**', '*.gradle.kts', '.github/workflows/build-launcher.yml']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,3 +20,9 @@ jobs:
         with:
           name: LMG-Launcher-debug
           path: app/build/outputs/apk/debug/*.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk LMG-Launcher.apk
+          gh release create "launcher-${{ github.run_number }}" LMG-Launcher.apk --title "LMG Launcher build ${{ github.run_number }}" --notes "Automatic build of ${{ github.sha }}" --prerelease
